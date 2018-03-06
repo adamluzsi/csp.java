@@ -19,8 +19,7 @@ interface VoidFunc {
 }
 
 public class Channel<E> implements Closeable, BlockingQueue<E> {
-    private final static Thread mainThread = Thread.currentThread();
-    private final SynchronousQueue<E> queue = new SynchronousQueue<>();
+    private final BlockingQueue<E> queue = new SynchronousQueue<>();
     private final AtomicBoolean open = new AtomicBoolean(true);
     private final List<Thread> threads = new ArrayList<>();
     private final ReentrantLock mutex = new ReentrantLock();
@@ -57,19 +56,6 @@ public class Channel<E> implements Closeable, BlockingQueue<E> {
     }
 
     @Override
-    public void put(E e) throws InterruptedException {
-        synchronize(() -> {
-            queue.put(e);
-            return null;
-        });
-    }
-
-    @Override
-    public E take() throws InterruptedException {
-        return (E) synchronize(queue::take);
-    }
-
-    @Override
     public void forEach(Consumer<? super E> action) {
         try {
             while (ok()) {
@@ -92,150 +78,6 @@ public class Channel<E> implements Closeable, BlockingQueue<E> {
         return toArray(new Object[0]);
     }
 
-    @Override
-    public boolean add(E e) {
-        try {
-            put(e);
-
-            return true;
-        } catch (InterruptedException ex) {
-            return false;
-        }
-    }
-
-    @Override
-    public boolean offer(E e) {
-        try {
-            return (Boolean) synchronize(() -> queue.offer(e));
-        } catch (InterruptedException ex) {
-            return false;
-        }
-    }
-
-
-    //////////////////////////////// dummy methods to implement BlockingQueue interface ////////////////////////////////
-
-    @Override
-    public Iterator<E> iterator() {
-        return queue.iterator();
-    }
-
-
-    @Override
-    public boolean offer(E e, long timeout, TimeUnit unit) throws InterruptedException {
-        try {
-            put(e);
-
-            return true;
-        } catch (ChannelIsClosed closed) {
-            return false;
-        }
-    }
-
-    @Override
-    public E poll(long timeout, TimeUnit unit) throws InterruptedException {
-        return null;
-    }
-
-    @Override
-    public int remainingCapacity() {
-        return 0;
-    }
-
-    @Override
-    public boolean remove(Object o) {
-        return false;
-    }
-
-    @Override
-    public boolean contains(Object o) {
-        return false;
-    }
-
-    @Override
-    public int drainTo(Collection<? super E> c) {
-        return 0;
-    }
-
-    @Override
-    public int drainTo(Collection<? super E> c, int maxElements) {
-        return 0;
-    }
-
-    @Override
-    public E remove() {
-        return null;
-    }
-
-    @Override
-    public E poll() {
-        return null;
-    }
-
-    @Override
-    public E element() {
-        return null;
-    }
-
-    @Override
-    public E peek() {
-        return null;
-    }
-
-    @Override
-    public int size() {
-        return 0;
-    }
-
-    @Override
-    public boolean isEmpty() {
-        return false;
-    }
-
-    @Override
-    public boolean containsAll(Collection<?> c) {
-        return false;
-    }
-
-    @Override
-    public boolean addAll(Collection<? extends E> c) {
-        return false;
-    }
-
-    @Override
-    public boolean removeAll(Collection<?> c) {
-        return false;
-    }
-
-    @Override
-    public boolean retainAll(Collection<?> c) {
-        return false;
-    }
-
-    @Override
-    public void clear() {
-
-    }
-
-    @Override
-    public boolean removeIf(Predicate<? super E> filter) {
-        return false;
-    }
-
-    @Override
-    public Spliterator<E> spliterator() {
-        return null;
-    }
-
-    @Override
-    public Stream<E> stream() {
-        return null;
-    }
-
-    @Override
-    public Stream<E> parallelStream() {
-        return null;
-    }
 
     //
     // [CORE]
@@ -289,5 +131,241 @@ public class Channel<E> implements Closeable, BlockingQueue<E> {
         }
 
         throw new IllegalStateException();
+    }
+
+    ////////////////////////////////////////////////// proxy  methods //////////////////////////////////////////////////
+
+    @Override
+    public void put(E e) throws InterruptedException {
+        synchronize(() -> {
+            queue.put(e);
+            return null;
+        });
+    }
+
+    @Override
+    public E take() throws InterruptedException {
+        return (E) synchronize(queue::take);
+    }
+
+    @Override
+    public boolean add(E e) {
+        try {
+            return (boolean) synchronize(() -> queue.add(e));
+        } catch (InterruptedException ex) {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean offer(E e) {
+        try {
+            return (boolean) synchronize(() -> queue.offer(e));
+        } catch (InterruptedException ex) {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean offer(E e, long timeout, TimeUnit unit) throws InterruptedException {
+        return (boolean) synchronize(() -> queue.offer(e, timeout, unit));
+    }
+
+    @Override
+    public Iterator<E> iterator() {
+        try {
+            return (Iterator<E>) synchronize(queue::iterator);
+        } catch (InterruptedException ex) {
+            return Collections.emptyIterator();
+        }
+    }
+
+    @Override
+    public E poll() {
+        try {
+            return (E) synchronize(queue::poll);
+        } catch (InterruptedException ex) {
+            return null;
+        }
+    }
+
+    @Override
+    public E poll(long timeout, TimeUnit unit) throws InterruptedException {
+        return (E) synchronize(() -> queue.poll(timeout, unit));
+    }
+
+    @Override
+    public int remainingCapacity() {
+        try {
+            return (int) synchronize(queue::remainingCapacity);
+        } catch (InterruptedException ex) {
+            return 0;
+        }
+    }
+
+    @Override
+    public boolean remove(Object o) {
+        try {
+            return (boolean) synchronize(() -> queue.remove(o));
+        } catch (InterruptedException ex) {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean contains(Object o) {
+        try {
+            return (boolean) synchronize(() -> queue.contains(o));
+        } catch (InterruptedException ex) {
+            return false;
+        }
+    }
+
+    @Override
+    public int drainTo(Collection<? super E> c) {
+        try {
+            return (int) synchronize(() -> queue.drainTo(c));
+        } catch (InterruptedException ex) {
+            return 0;
+        }
+    }
+
+    @Override
+    public int drainTo(Collection<? super E> c, int maxElements) {
+        try {
+            return (int) synchronize(() -> queue.drainTo(c, maxElements));
+        } catch (InterruptedException ex) {
+            return 0;
+        }
+    }
+
+    @Override
+    public E remove() {
+        try {
+            return (E) synchronize(queue::remove);
+        } catch (InterruptedException ex) {
+            throw new NoSuchElementException();
+        }
+    }
+
+    @Override
+    public E element() {
+        try {
+            return (E) synchronize(queue::element);
+        } catch (InterruptedException ex) {
+            throw new NoSuchElementException();
+        }
+    }
+
+    @Override
+    public E peek() {
+        try {
+            return (E) synchronize(queue::peek);
+        } catch (InterruptedException ex) {
+            return null;
+        }
+    }
+
+    @Override
+    public int size() {
+        try {
+            return (int) synchronize(queue::size);
+        } catch (InterruptedException ex) {
+            return 0;
+        }
+    }
+
+    @Override
+    public boolean isEmpty() {
+        try {
+            return (boolean) synchronize(queue::isEmpty);
+        } catch (InterruptedException ex) {
+            return true;
+        }
+    }
+
+    @Override
+    public boolean containsAll(Collection<?> c) {
+        try {
+            return (boolean) synchronize(() -> queue.containsAll(c));
+        } catch (InterruptedException ex) {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean addAll(Collection<? extends E> c) {
+        try {
+            return (boolean) synchronize(() -> queue.addAll(c));
+        } catch (InterruptedException ex) {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean removeAll(Collection<?> c) {
+        try {
+            return (boolean) synchronize(() -> queue.removeAll(c));
+        } catch (InterruptedException ex) {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean retainAll(Collection<?> c) {
+        try {
+            return (boolean) synchronize(() -> queue.retainAll(c));
+        } catch (InterruptedException ex) {
+            return false;
+        }
+    }
+
+    @Override
+    public void clear() {
+        try {
+            synchronize(() -> {
+                queue.clear();
+
+                return null;
+            });
+        } catch (InterruptedException ex) {
+            // ignore
+        }
+    }
+
+    @Override
+    public boolean removeIf(Predicate<? super E> filter) {
+        try {
+            return (boolean) synchronize(() -> queue.removeIf(filter));
+        } catch (InterruptedException ex) {
+            return false;
+        }
+    }
+
+    @Override
+    public Spliterator<E> spliterator() {
+        try {
+            return (Spliterator<E>) synchronize(queue::spliterator);
+        } catch (InterruptedException ex) {
+            return null;
+        }
+    }
+
+    @Override
+    public Stream<E> stream() {
+        try {
+            return (Stream<E>) synchronize(queue::stream);
+        } catch (InterruptedException ex) {
+            return null;
+        }
+    }
+
+    @Override
+    public Stream<E> parallelStream() {
+        try {
+            return (Stream<E>) synchronize(queue::parallelStream);
+        } catch (InterruptedException ex) {
+            return null;
+        }
     }
 }

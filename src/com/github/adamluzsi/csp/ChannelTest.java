@@ -130,9 +130,9 @@ public class ChannelTest {
             return null;
         });
 
-        wait(1);
+        wait(42);
         subject.close();
-        wait(TimeUnit.MILLISECONDS.toMillis(1));
+        wait(TimeUnit.MILLISECONDS.toMillis(42));
 
         try {
             Class<? extends ChannelIsClosed> klass = future.get(2, TimeUnit.MILLISECONDS).getClass();
@@ -220,9 +220,9 @@ public class ChannelTest {
 
         e.submit(subject::take);
 
-        assertTrue(e.submit(() -> subject.add(1)).get(1, TimeUnit.SECONDS));
+        assertTrue(e.submit(() -> subject.add(42)).get(1, TimeUnit.SECONDS));
         subject.close();
-        assertFalse(e.submit(() -> subject.add(1)).get(1, TimeUnit.SECONDS));
+        assertFalse(e.submit(() -> subject.add(42)).get(1, TimeUnit.SECONDS));
     }
 
 }

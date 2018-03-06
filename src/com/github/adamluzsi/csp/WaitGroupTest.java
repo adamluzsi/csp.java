@@ -10,14 +10,14 @@ public class WaitGroupTest {
     private ExecutorService es = Executors.newCachedThreadPool();
 
     @Test
-    public void testSize_CounterAtInitial_ZeroReturned() throws Exception {
+    public void testSize_CounterAtInitial_ZeroReturned() {
         WaitGroup wg = new WaitGroup();
 
         assertEquals(wg.size(), 0);
     }
 
     @Test
-    public void testAdd_NegativeValueAddedWhileSizeBiggerThanTheGivenValue_CounterDecremented() throws Exception {
+    public void testAdd_NegativeValueAddedWhileSizeBiggerThanTheGivenValue_CounterDecremented() {
         WaitGroup wg = new WaitGroup();
 
         wg.add(2);
@@ -27,14 +27,14 @@ public class WaitGroupTest {
     }
 
     @Test
-    public void testAdd_NegativeValueAddedSizePlusValueWillBeSmallerInTotal_ExceptionRaied() throws Exception {
+    public void testAdd_NegativeValueAddedSizePlusValueWillBeSmallerInTotal_ExceptionRaied() {
         WaitGroup wg = new WaitGroup();
 
         assertThrows(IllegalArgumentException.class, () -> wg.add(-1));
     }
 
     @Test
-    public void testAdd_PositiveValueAdded_CounterIncremented() throws Exception {
+    public void testAdd_PositiveValueAdded_CounterIncremented() {
         WaitGroup wg = new WaitGroup();
 
         wg.add(1);
@@ -44,7 +44,7 @@ public class WaitGroupTest {
 
 
     @Test
-    public void testDone_WhileTheCounterIsPositiv_CounterDecremented() throws Exception {
+    public void testDone_WhileTheCounterIsPositiv_CounterDecremented() {
         WaitGroup wg = new WaitGroup();
 
         wg.add(1);
@@ -54,7 +54,7 @@ public class WaitGroupTest {
     }
 
     @Test
-    public void testDone_WhileTheCounterIsZero_ExceptionThrown() throws Exception {
+    public void testDone_WhileTheCounterIsZero_ExceptionThrown() {
         WaitGroup wg = new WaitGroup();
 
         assertThrows(IllegalArgumentException.class, wg::done);
@@ -114,5 +114,24 @@ public class WaitGroupTest {
         assertTrue(raised);
     }
 
+
+    @Test
+    public void testHold_WhenSomethingEventuallyWillBeDone_BlockingThanRelease() throws Exception {
+        WaitGroup wg = new WaitGroup();
+        HoldRunner hr = new HoldRunner(wg);
+
+        wg.add(1);
+        final Future future = es.submit(hr);
+
+        Thread.sleep(TimeUnit.SECONDS.toMillis(1));
+        wg.done();
+
+        try {
+            future.get(3, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException | InterruptedException t) {
+            fail(t.getClass().getName());
+        }
+
+    }
 
 }

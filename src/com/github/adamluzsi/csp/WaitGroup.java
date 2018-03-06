@@ -22,7 +22,7 @@ public class WaitGroup {
 
     public synchronized void hold() throws InterruptedException {
         while (size() != 0) {
-            wait();
+            wait(1);
         }
     }
 
